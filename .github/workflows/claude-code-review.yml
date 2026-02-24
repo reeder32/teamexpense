@@ -25,6 +25,10 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}  # ← was missing
+          direct_prompt: |
+            Please review this entire PR for bugs. Focus on SQL injection and auth vulnerabilities,
+            logic errors, performance issues and memory leaks, and UI/UX accessibility violations.
+            Flag every issue with file, line number, severity, and explanation.
           trigger_phrase: "@claude"
           custom_instructions: |
             You are reviewing a TypeScript expense tracker app (Node/Express + React + SQLite).
@@ -34,4 +38,3 @@ jobs:
             3. Performance issues and memory leaks
             4. UI/UX and accessibility violations
             Be thorough — flag every issue you find with file, line, severity, and explanation.
-            
