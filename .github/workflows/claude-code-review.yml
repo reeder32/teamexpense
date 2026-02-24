@@ -13,7 +13,7 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
-      id-token: write
+      id-token: write  # ← was missing, required by the action
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,7 +24,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}  # ← was missing
           trigger_phrase: "@claude"
           custom_instructions: |
             You are reviewing a TypeScript expense tracker app (Node/Express + React + SQLite).
@@ -34,4 +34,3 @@ jobs:
             3. Performance issues and memory leaks
             4. UI/UX and accessibility violations
             Be thorough — flag every issue you find with file, line, severity, and explanation.
-EOF
