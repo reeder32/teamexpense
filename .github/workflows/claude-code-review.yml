@@ -34,3 +34,4 @@ jobs:
             3. Performance issues and memory leaks
             4. UI/UX and accessibility violations
             Be thorough — flag every issue you find with file, line, severity, and explanation.
+            
