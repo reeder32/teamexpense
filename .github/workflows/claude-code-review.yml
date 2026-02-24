@@ -1,0 +1,37 @@
+# .github/workflows/claude-code-review.yml
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude Code Review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Trigger on PR open/sync OR when someone comments "@claude review"
+          trigger_phrase: "@claude"
+          # Custom prompt for your benchmark
+          custom_instructions: |
+            You are reviewing a TypeScript expense tracker app (Node/Express + React + SQLite).
+            Focus on:
+            1. SQL injection and authentication vulnerabilities
+            2. Logic errors and off-by-one bugs
+            3. Performance issues and memory leaks
+            4. UI/UX and accessibility violations
+            Be thorough — flag every issue you find with file, line, severity, and explanation.
