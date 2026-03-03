@@ -22,13 +22,9 @@ jobs:
           git diff origin/${{ github.base_ref }}...HEAD > pr_diff.txt
 
       - name: OpenAI Review via API
-        id: review
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          DIFF=$(cat pr_diff.txt | head -c 20000)
-
-          # Write request body to a temp file to avoid shell escaping issues
           python3 - <<'PYEOF'
           import os, json, urllib.request, sys
 
@@ -37,6 +33,7 @@ jobs:
 
           payload = json.dumps({
             "model": "gpt-4o",
+            "response_format": {"type": "json_object"},
             "messages": [
               {
                 "role": "system",
@@ -47,7 +44,12 @@ jobs:
                   "2. Logic errors and off-by-one bugs\n"
                   "3. Performance issues and memory leaks\n"
                   "4. UI/UX and accessibility violations\n"
-                  "Be thorough — flag every issue you find with file, line, severity, and explanation."
+                  "Be thorough — flag every issue you find with file, line, severity, and explanation.\n\n"
+                  "You MUST respond with a JSON object in this exact format:\n"
+                  '{"comments": [{"path": "relative/file/path.ts", "line": 42, "severity": "critical|high|medium|low", "body": "explanation of the issue"}]}\n'
+                  "The path must match the file path in the diff (e.g. backend/src/routes/auth.ts).\n"
+                  "The line number must be a line that exists in the NEW version of the file in the diff.\n"
+                  "Return ONLY the JSON object, no other text."
                 )
               },
               {
@@ -74,28 +76,83 @@ jobs:
           try:
             with urllib.request.urlopen(req) as resp:
               data = json.loads(resp.read())
-              review = data["choices"][0]["message"]["content"]
+              review_json = data["choices"][0]["message"]["content"]
           except urllib.error.HTTPError as e:
             body = e.read().decode()
             print(f"OpenAI API error {e.code}: {body}", file=sys.stderr)
-            review = f"⚠️ OpenAI API error {e.code} — check that OPENAI_API_KEY secret is set correctly.\n\n{body}"
+            with open("review_result.json", "w") as f:
+              json.dump({"error": f"OpenAI API error {e.code}: {body}"}, f)
+            sys.exit(1)
 
-          with open(os.environ["GITHUB_ENV"], "a") as f:
-            f.write("OPENAI_REVIEW<<DELIM\n")
-            f.write(review + "\n")
-            f.write("DELIM\n")
+          with open("review_result.json", "w") as f:
+            f.write(review_json)
           PYEOF
 
-      - name: Post Review Comment
+      - name: Post Inline Review Comments
         uses: actions/github-script@v7
         with:
           script: |
-            const review = `## 🤖 OpenAI Code Review\n\n${process.env.OPENAI_REVIEW}`;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: review
+            const fs = require('fs');
+            const result = JSON.parse(fs.readFileSync('review_result.json', 'utf8'));
+
+            if (result.error) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## OpenAI Code Review\n\n⚠️ ${result.error}`
+              });
+              return;
+            }
+
+            const comments = result.comments || [];
+            if (comments.length === 0) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '## OpenAI Code Review\n\nNo issues found.'
+              });
+              return;
+            }
+
+            // Build inline comments for the review
+            const reviewComments = comments.map(c => ({
+              path: c.path,
+              line: c.line,
+              body: `**[${c.severity.toUpperCase()}]** ${c.body}`
+            }));
+
+            // Count by severity for summary
+            const counts = {};
+            comments.forEach(c => {
+              const s = c.severity.toLowerCase();
+              counts[s] = (counts[s] || 0) + 1;
             });
-        env:
-          OPENAI_REVIEW: ${{ env.OPENAI_REVIEW }}
+            const summary = Object.entries(counts)
+              .map(([s, n]) => `- **${s}**: ${n}`)
+              .join('\n');
+
+            try {
+              await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                event: 'COMMENT',
+                body: `## OpenAI Code Review\n\nFound **${comments.length}** issues:\n${summary}`,
+                comments: reviewComments
+              });
+            } catch (err) {
+              // If inline comments fail (e.g. line not in diff), fall back to single comment
+              let body = `## OpenAI Code Review\n\nFound **${comments.length}** issues:\n${summary}\n\n`;
+              body += '| File | Line | Severity | Issue |\n|------|------|----------|-------|\n';
+              comments.forEach(c => {
+                body += `| \`${c.path}\` | ${c.line} | ${c.severity} | ${c.body} |\n`;
+              });
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body
+              });
+            }
