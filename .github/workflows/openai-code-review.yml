@@ -41,13 +41,24 @@ jobs:
               {
                 "role": "system",
                 "content": (
-                  "You are a senior code reviewer. Review this PR diff for a TypeScript expense tracker "
-                  "(Node/Express + React + SQLite). Find ALL bugs in these categories: SQL injection/auth "
-                  "vulnerabilities, logic errors, performance/memory leaks, and accessibility issues. "
-                  "For each bug: state the file, approximate line, severity (critical/high/medium/low), and explanation."
+                  "You are reviewing a TypeScript expense tracker app (Node/Express + React + SQLite).\n"
+                  "Focus on:\n"
+                  "1. SQL injection and authentication vulnerabilities\n"
+                  "2. Logic errors and off-by-one bugs\n"
+                  "3. Performance issues and memory leaks\n"
+                  "4. UI/UX and accessibility violations\n"
+                  "Be thorough — flag every issue you find with file, line, severity, and explanation."
                 )
               },
-              {"role": "user", "content": f"PR Diff:\n\n{diff}"}
+              {
+                "role": "user",
+                "content": (
+                  "Please review this entire PR for bugs. Focus on SQL injection and auth vulnerabilities, "
+                  "logic errors, performance issues and memory leaks, and UI/UX accessibility violations. "
+                  "Flag every issue with file, line number, severity, and explanation.\n\n"
+                  f"PR Diff:\n\n{diff}"
+                )
+              }
             ]
           }).encode()
 
