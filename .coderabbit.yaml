@@ -1,10 +1,7 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 
 language: en-US
-tone_instructions: >
-  Be thorough and professional. Provide actionable feedback with clear explanations
-  of why a change is recommended. When identifying security or performance issues,
-  include the potential impact and a suggested fix. Use a constructive, mentor-like tone.
+tone_instructions: "Professional and constructive. Explain why changes are needed. Include impact and fixes for security/performance issues."
 
 early_access: true
 
@@ -50,19 +47,17 @@ reviews:
 
   # Path filters — focus on source code
   path_filters:
-    include:
-      - "backend/src/**"
-      - "frontend/src/**"
-      - "package.json"
-      - "tsconfig.json"
-    exclude:
-      - "node_modules/**"
-      - "dist/**"
-      - "build/**"
-      - "coverage/**"
-      - "*.min.js"
-      - "*.lock"
-      - "*.map"
+    - "backend/src/**"
+    - "frontend/src/**"
+    - "package.json"
+    - "tsconfig.json"
+    - "!node_modules/**"
+    - "!dist/**"
+    - "!build/**"
+    - "!coverage/**"
+    - "!*.min.js"
+    - "!*.lock"
+    - "!*.map"
 
   # Path-specific review instructions
   path_instructions:
