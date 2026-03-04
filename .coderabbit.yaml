@@ -1,0 +1,152 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: en-US
+tone_instructions: >
+  Be thorough and professional. Provide actionable feedback with clear explanations
+  of why a change is recommended. When identifying security or performance issues,
+  include the potential impact and a suggested fix. Use a constructive, mentor-like tone.
+
+early_access: true
+
+reviews:
+  profile: assertive
+
+  # Summaries & visuals
+  high_level_summary: true
+  high_level_summary_instructions: >
+    Provide a concise executive summary covering: (1) what changed and why,
+    (2) architectural impact, (3) security or performance concerns,
+    and (4) any breaking changes. Include a risk assessment (low/medium/high).
+  high_level_summary_in_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: true
+  collapse_walkthrough: false
+  review_status: true
+
+  # Effort & collaboration
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  suggested_reviewers: true
+
+  # Disable fluff
+  poem: false
+  in_progress_fortune: false
+
+  # Auto-review settings
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+    base_branches:
+      - main
+      - develop
+    ignore_title_keywords:
+      - WIP
+      - DO NOT MERGE
+      - DRAFT
+
+  # Path filters — focus on source code
+  path_filters:
+    include:
+      - "backend/src/**"
+      - "frontend/src/**"
+      - "package.json"
+      - "tsconfig.json"
+    exclude:
+      - "node_modules/**"
+      - "dist/**"
+      - "build/**"
+      - "coverage/**"
+      - "*.min.js"
+      - "*.lock"
+      - "*.map"
+
+  # Path-specific review instructions
+  path_instructions:
+    - path: "backend/src/routes/**"
+      instructions: >
+        API routes: Verify input validation, proper HTTP status codes,
+        authentication/authorization checks, and SQL injection prevention.
+        Flag any raw SQL queries that don't use parameterized statements.
+    - path: "backend/src/middleware/**"
+      instructions: >
+        Middleware: Check JWT validation logic, error handling, and
+        ensure auth bypass is not possible. Verify token expiry handling.
+    - path: "backend/src/db.ts"
+      instructions: >
+        Database layer: Check for SQL injection, proper connection handling,
+        and data integrity constraints. Verify migrations are safe.
+    - path: "backend/src/utils/**"
+      instructions: >
+        Utility functions: Verify input sanitization, edge case handling,
+        and that validation logic is comprehensive and consistent.
+    - path: "frontend/src/pages/**"
+      instructions: >
+        Pages: Check for proper state management, error boundaries,
+        loading states, and accessibility (ARIA labels, keyboard navigation).
+    - path: "frontend/src/components/**"
+      instructions: >
+        Components: Verify React best practices — proper hook usage,
+        memoization where needed, prop validation, and XSS prevention.
+    - path: "frontend/src/api/**"
+      instructions: >
+        API client: Check error handling, request/response interceptors,
+        auth token attachment, and that sensitive data is not logged.
+
+  # Pre-merge quality gates
+  pre_merge_checks:
+    title:
+      mode: warning
+      requirements: "Use conventional commits format (feat:, fix:, refactor:, docs:, test:, chore:)"
+    description:
+      mode: warning
+    docstrings:
+      mode: warning
+      threshold: 70
+    custom_checks:
+      - name: "Security"
+        mode: error
+        instructions: >
+          Check for hardcoded secrets, credentials, API keys, or tokens.
+          Verify no sensitive data is exposed in logs or error messages.
+          Flag any use of eval(), innerHTML, or dangerouslySetInnerHTML.
+      - name: "Performance"
+        mode: warning
+        instructions: >
+          Identify potential performance issues: N+1 queries, missing
+          database indexes, unbounded queries, memory leaks in React
+          components (missing cleanup in useEffect), and unnecessary re-renders.
+
+  # Finishing touches — automated improvements
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+
+  # Linting & analysis tools
+  tools:
+    eslint:
+      enabled: true
+    biome:
+      enabled: true
+    semgrep:
+      enabled: true
+    github-checks:
+      enabled: true
+      timeout_ms: 90000
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  learnings:
+    scope: auto
+  issues:
+    scope: auto
